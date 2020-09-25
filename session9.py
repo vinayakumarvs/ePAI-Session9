@@ -1,30 +1,12 @@
-# Session 9 - Decorators
-# EPAi Session9 Assignment
-
-#### Objective of Assignment:
-
-1. Write separate decorators that:
-
-    a. allows a function to run only on odd seconds 
-
-    b. log 
-
-    c. authenticate
-
-    d. timed (n times)
-
-2. Provides privilege access (has 4 parameters, based on privileges (high, mid, low, no), gives access to all 4, 3, 2 or 1 params)
-
-Write our htmlize code using inbuild singledispatch 
+from time import perf_counter, localtime
+from collections import defaultdict
+from functools import wraps, singledispatch
+from datetime import datetime, timezone
+from decimal import Decimal
+from html import escape
 
 
-
-## Functions Defined:
-
-* Function to run only at odd second: A simple decorator to make the function return the output only if the current time has seconds numeric as an odd digit.
-
-    ```python
-    def odd_sec_run(time:datetime):
+def odd_sec_run(time:datetime):
     """
     This is a decorator factory which takes a parameter
     # param:
@@ -52,11 +34,8 @@ Write our htmlize code using inbuild singledispatch
                 return f"it is odd time {run_dt}"
         return inner
     return odd_second_runner
-    ```
 
-* Function to show log: A decorator to print the logs of a function, the start time of execution, end time, running time. Also, whether the function returns something, it's docs. The decorator adds these functionality for us.
 
-```python
 func_reg = defaultdict(lambda : 0)
 
 def log_func(fn):
@@ -89,11 +68,7 @@ def log_func(fn):
 		print(f'Function Name: {fn.__name__} \n Function use {fn.__doc__} \n ID of function is {func_id} \n Executed at {func_time} \n Executed for about {count} times.\n Current Execution Time: {elapsed_time} seconds \n Total Execution Time: {total_time} seconds')
 		return result
 	return inner
-```
 
-* Function to authenticate password: Decorator to implement simple authentication functionality and give that to any function of our choice. The user can make use of a closure to provide the current password. It has to match with the default user password provided beforehand.
-
-```python
 def authenticate(user_password:str):
     """
     This function takes in user password and checks with the one 
@@ -109,11 +84,7 @@ def authenticate(user_password:str):
         else:
             raise ValueError("Provide correct password")
     return auth
-```
 
-* time the function for 'n' times: A decorator factory, that takes in an integer, defining the number of iteration of which a function's runtime has to be calculated and average is calculated. It returns a decorator.
-
-```python
 def time_it(reps: int):
     """
     Decorator factory to take in an integer defining the number of
@@ -138,11 +109,6 @@ def time_it(reps: int):
         return inner
     return timed
 
-```
-
-* Privilege: Decorator that provides privilege access. A function can have four parameters and based on the privileges (high, mid, low, no), access is given to all 4, 3, 2 or 1 parameters.
-
-```python
 def privilege(level:int):
     """
     This function takes in integer which defines the access level
@@ -161,18 +127,52 @@ def privilege(level:int):
         else:
             raise ValueError("No sufficient privilege")
     return access_func
-```
 
-* singledispatch: Writing HTMLize code using singledispatch, available as a built-in decorator in functools module. Also the idea is to add functionality using monkey patching and not make every thing hard coded.
-
-
-```python
+@singledispatch
 def htmlize(input: 'input argument') -> str :
     '''
     function to htmlize the input based on the type of input.
     this is a default initializer.
     '''
     return escape(str(input))
-```
 
-Created a test functions to validate the functions.
+@htmlize.register(int)
+def html_int(input: int) -> str:
+    '''
+    converts int in html formats
+    '''
+    return f'{input}(<i>{str(hex(input))}</i>)'
+
+@htmlize.register(Decimal)
+@htmlize.register(float)
+def html_real(input: float) -> str:
+    '''
+    converts reals to html function
+    '''
+    return f'{round(input, 2)}'
+
+@htmlize.register(str)
+def html_str(input: str) -> str:
+    '''
+    fconvert string to html format
+    '''
+    return escape(input).replace('\n', '<br/>\n')
+
+@htmlize.register(tuple)
+@htmlize.register(list)
+@htmlize.register(set)
+@htmlize.register(frozenset)
+def html_sequence(input) ->str:
+    '''
+    converts a sequence in html format
+    '''
+    items = (f'<li>{escape(str(item))}</li>' for item in input)
+    return '<ul>\n' + '\n'.join(items) + '\n</ul>'
+
+@htmlize.register(dict)
+def html_dict(input: dict) -> str:
+    '''
+    converts dictionary in html format
+    '''
+    items = (f'<li>{k}={v}</li>' for k, v in input.items())
+    return '<ul>\n' + '\n'.join(items) + '\n</ul>'
